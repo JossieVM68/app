@@ -28,7 +28,7 @@
 <main class="wrap">
   {% for kind, msg in flashes %}<div class="flash {{ kind }}">{{ msg }}</div>{% endfor %}
   {% if request.session.get('uid') and not ai_ready %}
-  <div class="flash warn">Falta conectar la inteligencia artificial (llave de Claude). Puedes navegar, pero no se pueden crear CVs ni cartas todavía.</div>
+  <div class="flash info">Tu asistente (Claude) busca vacantes y prepara tus CVs y cartas cada día; aparecen aquí solos. Los botones de IA de la app se activan solo si algún día agregas una llave de Claude.</div>
   {% endif %}
   {% block content %}{% endblock %}
 </main>
