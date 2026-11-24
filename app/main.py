@@ -151,9 +151,9 @@ def login_page(request: Request):
         has_pw = bool(get_setting(db, "auth").get("hash"))
     finally:
         db.close()
-    if not has_pw:
+    if not has_pw and not _google_ready():
         return RedirectResponse("/setup", 303)
-    return render(request, "login.html")
+    return render(request, "login.html", google=_google_ready(), has_pw=has_pw)
 
 
 @app.post("/login")
@@ -179,6 +179,57 @@ async def login(request: Request):
     time.sleep(1)
     flash(request, "Contraseña incorrecta.", "error")
     return RedirectResponse("/login", 303)
+
+
+def _google_ready() -> bool:
+    return bool(config.GOOGLE_CLIENT_ID and config.GOOGLE_CLIENT_SECRET and config.ALLOWED_EMAILS)
+
+
+def _callback_url() -> str:
+    return config.APP_URL.rstrip("/") + "/auth/google/callback"
+
+
+@app.get("/auth/google")
+def google_start(request: Request):
+    if not _google_ready():
+        return RedirectResponse("/login", 303)
+    state = secrets.token_urlsafe(24)
+    request.session["g_state"] = state
+    from urllib.parse import urlencode
+    q = urlencode({"client_id": config.GOOGLE_CLIENT_ID, "redirect_uri": _callback_url(), "response_type": "code",
+                   "scope": "openid email", "state": state, "prompt": "select_account"})
+    return RedirectResponse("https://accounts.google.com/o/oauth2/v2/auth?" + q, 303)
+
+
+@app.get("/auth/google/callback")
+def google_callback(request: Request, code: str = "", state: str = ""):
+    import httpx
+    expected = request.session.pop("g_state", "")
+    if not _google_ready() or not code or not expected or not hmac.compare_digest(state, expected):
+        flash(request, "No se pudo iniciar sesión con Google. Intenta otra vez.", "error")
+        return RedirectResponse("/login", 303)
+    try:
+        tok = httpx.post("https://oauth2.googleapis.com/token", timeout=20, data={
+            "code": code, "client_id": config.GOOGLE_CLIENT_ID, "client_secret": config.GOOGLE_CLIENT_SECRET,
+            "redirect_uri": _callback_url(), "grant_type": "authorization_code"}).json()
+        info = httpx.get("https://openidconnect.googleapis.com/v1/userinfo", timeout=20,
+                         headers={"Authorization": f"Bearer {tok['access_token']}"}).json()
+    except Exception:
+        flash(request, "No se pudo iniciar sesión con Google.", "error")
+        return RedirectResponse("/login", 303)
+    email = str(info.get("email", "")).lower()
+    if not info.get("email_verified") or email not in config.ALLOWED_EMAILS:
+        flash(request, "Esa cuenta de Google no tiene acceso a esta app.", "error")
+        return RedirectResponse("/login", 303)
+    db = db_session()
+    try:
+        auth = get_setting(db, "auth")
+    finally:
+        db.close()
+    request.session.clear()
+    request.session["uid"] = "josefina"
+    request.session["pv"] = auth.get("version")
+    return RedirectResponse("/", 303)
 
 
 @app.post("/logout")

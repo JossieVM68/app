@@ -34,4 +34,9 @@ SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
 DIGEST_TO = os.getenv("DIGEST_TO", "")
 APP_URL = os.getenv("APP_URL", os.getenv("RENDER_EXTERNAL_URL", "http://localhost:8000"))
 
-USER_AGENT = "JobFinderPersonal/1.0 (+private job search assistant)"
+# Entrar con Google (opcional): solo los correos de esta lista pueden entrar
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
+ALLOWED_EMAILS = [e.strip().lower() for e in os.getenv("ALLOWED_EMAILS", "").split(",") if e.strip()]
+
+USER_AGENT ="JobFinderPersonal/1.0 (+private job search assistant)"

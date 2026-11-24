@@ -54,6 +54,7 @@ textarea{resize:vertical}
 .btn.ghost{background:transparent}
 .btn.danger,.link.danger{color:var(--bad)}
 .btn.full{width:100%}
+.btn.google{gap:10px;margin-top:12px}
 .btn:disabled{opacity:.6;cursor:default}
 .link{background:none;border:none;color:var(--muted);font:inherit;font-weight:700;cursor:pointer;padding:4px}
 form.inline{display:inline-flex;gap:8px;flex-wrap:wrap}
