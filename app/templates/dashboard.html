@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% from "_macros.html" import job_row %}
+{% block title %}Inicio{% endblock %}
+{% block content %}
+<section class="hero">
+  <div>
+    <h1>¡Hola, Josefina! 👋</h1>
+    <p class="muted">Hoy es {{ d.today.strftime('%d/%m/%Y') }}. Esto es lo que toca hoy.</p>
+  </div>
+  <form method="post" action="/buscar" data-busy="Buscando vacantes nuevas…">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button class="btn primary" {% if running %}disabled{% endif %}>{% if running %}Buscando…{% else %}🔎 Buscar ahora{% endif %}</button>
+  </form>
+</section>
+{% if running %}<div class="flash info" id="run-status" data-poll="1">Buscando vacantes en todas las fuentes… esta página se actualizará sola.</div>{% endif %}
+
+{% if not has_profile %}
+<div class="card callout">
+  <h2>Paso 1: sube tu currículum</h2>
+  <p>La app lo lee, entiende tu experiencia y empieza a buscar los trabajos que mejor te quedan.</p>
+  <a class="btn primary" href="/perfil">Subir mi CV</a>
+</div>
+{% endif %}
+
+{% set g = d.goal.get('interviews', 5) %}
+<section class="stats">
+  <div class="stat big">
+    <div class="ring" style="--p: {{ [100, (d.interviews * 100 // g) if g else 0]|min }}"><span>{{ d.interviews }}<small>/{{ g }}</small></span></div>
+    <div><strong>Entrevistas</strong><p class="muted">{% if d.days_left is not none %}{% if d.days_left >= 0 %}Quedan {{ d.days_left }} días para tu meta{% else %}La fecha de la meta ya pasó{% endif %}{% else %}<a href="/ajustes">Pon fecha a tu meta</a>{% endif %}</p></div>
+  </div>
+  <div class="stat"><span class="num">{{ d.applied_today }}<small>/{{ d.goal.get('daily_applications', 5) }}</small></span><span>Aplicaciones hoy</span></div>
+  <div class="stat"><span class="num">{{ d.applied }}</span><span>Aplicaciones en total</span></div>
+  <div class="stat"><span class="num">{{ d.new_today }}</span><span>Vacantes nuevas (24 h)</span></div>
+</section>
+
+<div class="grid2">
+  <section class="card">
+    <h2>📌 Pendientes de hoy</h2>
+    {% if not d.followups and not d.upcoming_interviews and not d.deadlines %}
+      <p class="muted">Nada urgente. ¡Aprovecha para aplicar a tus mejores vacantes!</p>
+    {% endif %}
+    {% for a in d.upcoming_interviews %}
+      <a class="todo int" href="/aplicaciones/{{ a.id }}">🎤 <span><strong>Entrevista {{ a.interview_at.strftime('%d/%m %H:%M') }}</strong><br>{{ a.job.title }} — {{ a.job.company }}</span></a>
+    {% endfor %}
+    {% for a in d.followups %}
+      <a class="todo fu" href="/aplicaciones/{{ a.id }}">✉️ <span><strong>Mandar seguimiento</strong><br>{{ a.job.title }} — {{ a.job.company }} (aplicaste el {{ a.applied_at.strftime('%d/%m') }})</span></a>
+    {% endfor %}
+    {% for j in d.deadlines %}
+      <a class="todo dl" href="/vacantes/{{ j.id }}">⏰ <span><strong>Cierra el {{ j.deadline.strftime('%d/%m') }}</strong><br>{{ j.title }} — {{ j.company }}</span></a>
+    {% endfor %}
+  </section>
+  <section class="card">
+    <h2>⭐ Mejores vacantes para ti</h2>
+    {% for j in d.top %}{{ job_row(j, csrf, '/') }}{% else %}
+      <p class="muted">Todavía no hay vacantes con puntaje alto. {% if has_profile %}Presiona “Buscar ahora”.{% endif %}</p>
+    {% endfor %}
+    <a class="btn ghost" href="/vacantes">Ver todas las vacantes →</a>
+  </section>
+</div>
+
+{% if d.last_run %}
+<p class="muted small center">Última búsqueda: {{ d.last_run.started_at.strftime('%d/%m %H:%M') }} UTC · {{ d.last_run.new }} nuevas · {{ d.last_run.scored }} analizadas</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,25 @@
+{% macro score(s, pf=None) -%}
+{% if s is not none %}<span class="score {{ 'hi' if s >= 80 else ('mid' if s >= 65 else ('lo' if s >= 45 else 'bad')) }}" title="Qué tan bien encaja contigo">{{ s }}</span>
+{% else %}<span class="score pending" title="Puntaje básico (falta análisis con IA)">~{{ pf or 0 }}</span>{% endif %}
+{%- endmacro %}
+
+{% macro job_row(j, csrf, next='/vacantes') -%}
+<div class="job">
+  {{ score(j.score, j.prefilter) }}
+  <a class="job-main" href="/vacantes/{{ j.id }}">
+    <strong>{{ j.title }}</strong>
+    <span class="muted">{{ j.company or '—' }} · {{ j.location or 'Ubicación no indicada' }}{% if j.remote %} · <em class="tag">Remoto</em>{% endif %}</span>
+    {% if j.analysis and j.analysis.resumen %}<span class="small">{{ j.analysis.resumen }}</span>{% endif %}
+  </a>
+  <div class="job-meta">
+    {% set an = j.analysis or {} %}
+    {% if an.distance_miles is defined %}<span class="tag {{ 'ok' if an.distance_miles <= 5 else 'due' }}">📍 {{ an.distance_miles }} mi</span>{% else %}<span class="tag">📍 verificar distancia</span>{% endif %}
+    {% if an.pay_hourly %}<span class="tag money">${{ '%.2f'|format(an.pay_hourly[0]) }}{% if an.pay_hourly[1] != an.pay_hourly[0] %}–{{ '%.2f'|format(an.pay_hourly[1]) }}{% endif %}/h</span>{% elif j.salary %}<span class="tag money">{{ j.salary }}</span>{% endif %}
+    {% if an.filtro %}<span class="tag due" title="{{ an.filtro|join('; ') }}">No cumple</span>{% endif %}
+    {% if j.deadline %}<span class="tag due">Cierra {{ j.deadline.strftime('%d/%m') }}</span>{% endif %}
+    {% if j.status == 'guardado' %}<span class="tag star">⭐ Guardada</span>{% endif %}
+    {% if j.status == 'aplicando' %}<span class="tag ok">En proceso</span>{% endif %}
+    <span class="tag src">{{ j.source }}</span>
+  </div>
+</div>
+{%- endmacro %}

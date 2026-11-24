@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Ajustes{% endblock %}
+{% block content %}
+<section class="hero"><div><h1>Ajustes</h1></div></section>
+<div class="grid2">
+  <section class="card">
+    <h2>🎯 Mi meta</h2>
+    <form method="post" action="/ajustes/meta">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <label>Entrevistas que quiero conseguir<input type="number" name="interviews" min="1" value="{{ goal.interviews }}"></label>
+      <label>Para esta fecha<input type="date" name="deadline" value="{{ goal.deadline or '' }}"></label>
+      <label>Aplicaciones por día<input type="number" name="daily_applications" min="1" value="{{ goal.daily_applications }}"></label>
+      <button class="btn primary">Guardar meta</button>
+    </form>
+  </section>
+  <section class="card">
+    <h2>🔒 Cambiar contraseña</h2>
+    <form method="post" action="/ajustes/password">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <label>Contraseña actual<input type="password" name="current" autocomplete="current-password" required></label>
+      <label>Nueva contraseña (10+ caracteres)<input type="password" name="password" minlength="10" autocomplete="new-password" required></label>
+      <label>Repite la nueva<input type="password" name="password2" minlength="10" autocomplete="new-password" required></label>
+      <button class="btn">Cambiar</button>
+    </form>
+  </section>
+  <section class="card">
+    <h2>📬 Resumen diario por email</h2>
+    <p>{% if digest_ready %}Activado ✅. Recibirás un resumen después de cada búsqueda.{% else %}No está activado todavía. Se configura en el servidor.{% endif %}</p>
+  </section>
+</div>
+{% endblock %}

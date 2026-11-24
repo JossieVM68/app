@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Mi perfil{% endblock %}
+{% block content %}
+<section class="hero"><div><h1>Mi perfil</h1><p class="muted">La app usa esto para buscar y escribir por ti. Nunca inventa nada que no esté aquí.</p></div></section>
+
+<section class="card">
+  <h2>{% if profile %}Actualizar mi currículum{% else %}Paso 1: sube tu currículum{% endif %}</h2>
+  {% if upload %}<p class="small muted">Último archivo: {{ upload.filename }} ({{ upload.created_at.strftime('%d/%m/%Y') }})</p>{% endif %}
+  <form method="post" action="/perfil/cv" enctype="multipart/form-data" data-busy="Leyendo tu currículum y creando tu perfil…">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>Archivo (PDF o Word)<input type="file" name="file" accept=".pdf,.docx,.txt"></label>
+    <details><summary>O pega el texto de tu CV</summary><textarea name="pasted" rows="8"></textarea></details>
+    <label>Cuéntame más de ti (opcional, ayuda mucho)
+      <textarea name="notes" rows="4" placeholder="Ej.: Qué tipo de trabajo buscas, qué te apasiona, horario que prefieres, si tienes licencia de Gateways (ECE), CDA, CPR/First Aid, si manejas, cuánto quieres ganar…">{{ profile.notes if profile else '' }}</textarea></label>
+    <button class="btn primary">{% if profile %}Volver a analizar{% else %}Analizar mi CV{% endif %}</button>
+  </form>
+</section>
+
+{% if profile %}
+{% set ab = profile.about or {} %}
+<div class="grid2">
+  <section class="card">
+    <h2>Así te ve la app</h2>
+    <p>{{ ab.resumen }}</p>
+    {% if ab.personalidad %}<h3>Tu personalidad</h3><p>{{ ab.personalidad }}</p>{% endif %}
+    {% if ab.fortalezas %}<h3>Fortalezas</h3><ul>{% for x in ab.fortalezas %}<li>{{ x }}</li>{% endfor %}</ul>{% endif %}
+    {% if ab.logros_clave %}<h3>Logros clave</h3><ul>{% for x in ab.logros_clave %}<li>{{ x }}</li>{% endfor %}</ul>{% endif %}
+  </section>
+  <section class="card">
+    <h2>Recomendaciones para ti</h2>
+    <ul>{% for x in ab.recomendaciones or [] %}<li>{{ x }}</li>{% endfor %}</ul>
+    {% if ab.industrias %}<h3>Dónde buscar</h3><div class="chips">{% for x in ab.industrias %}<span class="chip">{{ x }}</span>{% endfor %}</div>{% endif %}
+    <a class="btn mt" href="/perfil/cv-base.docx">⬇️ Descargar mi CV base mejorado</a>
+  </section>
+</div>
+{% endif %}
+
+<section class="card" id="preferencias">
+  <h2>Qué estoy buscando</h2>
+  <form method="post" action="/perfil/preferencias">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <div class="grid2">
+      <label>Puestos que quiero (uno por línea)<textarea name="target_titles" rows="6">{{ prefs.target_titles|join('\n') }}</textarea></label>
+      <label>Términos de búsqueda (uno por línea)<textarea name="search_terms" rows="6">{{ prefs.search_terms|join('\n') }}</textarea></label>
+      <label>Ciudades (una por línea)<textarea name="locations" rows="3" placeholder="Chicago, IL">{{ prefs.locations|join('\n') }}</textarea></label>
+      <label>No mostrar puestos que digan (uno por línea)<textarea name="exclude_keywords" rows="3">{{ prefs.exclude_keywords|join('\n') }}</textarea></label>
+    </div>
+    <div class="card callout">
+      <h3>Reglas firmes</h3>
+      <div class="grid2 tight">
+        <label>Dirección de mi casa (solo para calcular distancias; no se comparte)<input name="home_address" value="{{ prefs.home_address }}" placeholder="Calle, Chicago, IL 606xx" autocomplete="street-address"></label>
+        <label>Distancia máxima (millas)<input name="max_miles" inputmode="decimal" value="{{ prefs.max_miles|round(1) if prefs.max_miles else '' }}"></label>
+        <label>Pago mínimo por hora (USD)<input name="min_hourly" inputmode="decimal" value="{{ prefs.min_hourly if prefs.min_hourly else '' }}"></label>
+        <label class="check"><input type="checkbox" name="strict_unknown" {{ 'checked' if prefs.strict_unknown }}> Esconder vacantes que no dicen el pago o la dirección</label>
+      </div>
+      {% if prefs.home_coords %}<p class="small muted">✅ Ubicación de casa encontrada.</p>{% elif prefs.home_address %}<p class="small muted">Se ubicará tu casa en la próxima búsqueda.</p>{% endif %}
+    </div>
+    <label>Habilidades y palabras clave (una por línea)<textarea name="keywords" rows="4">{{ prefs.keywords|join('\n') }}</textarea></label>
+    <div class="row wrap">
+      <label class="check"><input type="checkbox" name="onsite_ok" {{ 'checked' if prefs.onsite_ok }}> Presencial</label>
+      <label class="check"><input type="checkbox" name="hybrid_ok" {{ 'checked' if prefs.hybrid_ok }}> Híbrido</label>
+      <label class="check"><input type="checkbox" name="remote_ok" {{ 'checked' if prefs.remote_ok }}> Remoto</label>
+      <label>Idioma de documentos
+        <select name="doc_lang">{% for v, l in [('auto','Según la vacante'),('en','Inglés'),('es','Español')] %}<option value="{{ v }}" {{ 'selected' if prefs.doc_lang == v }}>{{ l }}</option>{% endfor %}</select></label>
+    </div>
+    <label>Algo más que la app deba saber<textarea name="extra_context" rows="2">{{ prefs.extra_context }}</textarea></label>
+    <button class="btn primary">Guardar preferencias</button>
+  </form>
+</section>
+
+{% if profile %}
+<section class="card" id="avanzado">
+  <details><summary>Avanzado: editar mi CV base (formato técnico)</summary>
+    <form method="post" action="/perfil/editar">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <textarea name="resume_json" rows="20" class="mono">{{ profile.resume|tojson(indent=2) }}</textarea>
+      <button class="btn">Guardar</button>
+    </form>
+  </details>
+</section>
+{% endif %}
+{% endblock %}

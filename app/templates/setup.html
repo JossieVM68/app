@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Crear contraseña{% endblock %}
+{% block content %}
+<div class="auth">
+  <div class="card auth-card">
+    <div class="auth-logo">🌱</div>
+    <h1>Bienvenida</h1>
+    <p class="muted">Crea tu contraseña. Solo tú podrás entrar a esta app.</p>
+    <form method="post" action="/setup">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      {% if need_code %}<label>Código de activación<input name="code" autocomplete="off" required></label>{% endif %}
+      <label>Nueva contraseña (mínimo 10 caracteres)<input type="password" name="password" minlength="10" autocomplete="new-password" required></label>
+      <label>Repite la contraseña<input type="password" name="password2" minlength="10" autocomplete="new-password" required></label>
+      <button class="btn primary full">Crear y entrar</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% from "_macros.html" import score %}
+{% block title %}{{ job.title }}{% endblock %}
+{% block content %}
+<a class="back" href="/vacantes">← Vacantes</a>
+<section class="hero">
+  <div class="row-start">
+    {{ score(job.score, job.prefilter) }}
+    <div>
+      <h1>{{ job.title }}</h1>
+      <p class="muted">{{ job.company or '—' }} · {{ job.location or 'Ubicación no indicada' }}{% if job.remote %} · Remoto{% endif %}{% if job.salary %} · {{ job.salary }}{% endif %}</p>
+      <p class="small muted">Fuente: {{ job.source }}{% if job.posted_at %} · Publicada {{ job.posted_at.strftime('%d/%m/%Y') }}{% endif %}{% if job.deadline %} · <strong class="due-text">Cierra {{ job.deadline.strftime('%d/%m/%Y') }}</strong>{% endif %}</p>
+    </div>
+  </div>
+</section>
+
+<div class="actions card">
+  {% if job.application %}
+    <a class="btn primary" href="/aplicaciones/{{ job.application.id }}">📄 Ver mi aplicación</a>
+  {% else %}
+  <form method="post" action="/vacantes/{{ job.id }}/preparar" data-busy="Creando tu CV adaptado, carta y emails…" class="row">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <select name="lang" title="Idioma de los documentos">
+      <option value="">Idioma automático</option><option value="en">Inglés</option><option value="es">Español</option>
+    </select>
+    <button class="btn primary">✨ Preparar mi aplicación</button>
+  </form>
+  {% endif %}
+  {% if job.url %}<a class="btn ghost" href="{{ job.url }}" target="_blank" rel="noopener noreferrer">Ver publicación original ↗</a>{% endif %}
+  <form method="post" action="/vacantes/{{ job.id }}/estado" class="inline">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    {% if job.status != 'guardado' %}<button class="btn ghost" name="estado" value="guardado">⭐ Guardar</button>{% endif %}
+    {% if job.status != 'descartado' %}<button class="btn ghost danger" name="estado" value="descartado">No me interesa</button>
+    {% else %}<button class="btn ghost" name="estado" value="nuevo">Restaurar</button>{% endif %}
+  </form>
+</div>
+
+{% set an = job.analysis or {} %}
+<div class="row mt">
+  {% if an.distance_miles is defined %}<span class="tag {{ 'ok' if an.distance_miles <= (prefs.max_miles or 999) else 'due' }}">📍 A {{ an.distance_miles }} millas de tu casa</span>{% else %}<span class="tag">📍 Distancia por verificar{% if an.work_address %}: {{ an.work_address }}{% endif %}</span>{% endif %}
+  {% if an.pay_hourly %}<span class="tag money">💵 ${{ '%.2f'|format(an.pay_hourly[0]) }}–{{ '%.2f'|format(an.pay_hourly[1]) }} por hora</span>{% else %}<span class="tag">💵 Pago no indicado</span>{% endif %}
+  {% if an.work_mode %}<span class="tag">{{ {'onsite':'Presencial','hybrid':'Híbrido','remote':'Remoto'}.get(an.work_mode, 'Modalidad no indicada') }}</span>{% endif %}
+</div>
+{% if an.filtro %}<div class="flash warn mt">No cumple tus reglas: {{ an.filtro|join('; ') }}</div>{% endif %}
+{% if an and an.resumen %}
+<div class="grid2">
+  <section class="card"><h2>¿Por qué este puntaje?</h2><p>{{ an.resumen }}</p>
+    {% if an.fortalezas %}<h3>✅ Tus fortalezas</h3><ul>{% for x in an.fortalezas %}<li>{{ x }}</li>{% endfor %}</ul>{% endif %}
+    {% if an.brechas %}<h3>⚠️ Lo que te podría faltar</h3><ul>{% for x in an.brechas %}<li>{{ x }}</li>{% endfor %}</ul>{% endif %}
+  </section>
+  <section class="card"><h2>Palabras clave del ATS</h2>
+    <p class="muted small">Lo que el sistema de la empresa va a buscar en tu CV.</p>
+    <div class="chips">{% for k in an.keywords or [] %}<span class="chip">{{ k }}</span>{% endfor %}</div>
+  </section>
+</div>
+{% else %}
+<div class="card"><p class="muted">Esta vacante todavía no se analiza con IA.</p>
+  <form method="post" action="/vacantes/{{ job.id }}/puntuar" data-busy="Analizando…"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn">Analizar ahora</button></form></div>
+{% endif %}
+
+<section class="card">
+  <h2>Descripción</h2>
+  {% if job.description|length < 600 %}<p class="flash warn">La descripción parece incompleta. Para un mejor CV, pega la descripción completa abajo.</p>{% endif %}
+  <div class="desc">{{ job.description }}</div>
+  <details><summary>Pegar la descripción completa</summary>
+    <form method="post" action="/vacantes/{{ job.id }}/descripcion" data-busy="Analizando…">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <textarea name="description" rows="8" required></textarea>
+      <button class="btn">Guardar y volver a analizar</button>
+    </form>
+  </details>
+</section>
+{% endblock %}

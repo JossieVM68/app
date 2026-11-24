@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Mis aplicaciones{% endblock %}
+{% block content %}
+<section class="hero"><div><h1>Mis aplicaciones</h1><p class="muted">Todo tu seguimiento en un solo lugar.</p></div></section>
+{% if not apps %}
+<div class="card callout"><h2>Aún no tienes aplicaciones</h2><p>Abre una vacante y presiona “Preparar mi aplicación”.</p><a class="btn primary" href="/vacantes">Ver vacantes</a></div>
+{% else %}
+<div class="board">
+  {% for k, l in statuses %}
+  <div class="col">
+    <h3>{{ l }} <span class="count">{{ cols[k]|length }}</span></h3>
+    {% for a in cols[k] %}
+    <a class="mini st-{{ a.status }}" href="/aplicaciones/{{ a.id }}">
+      <strong>{{ a.job.title }}</strong>
+      <span class="muted small">{{ a.job.company }}</span>
+      <span class="small">
+        {% if a.interview_at %}🎤 {{ a.interview_at.strftime('%d/%m %H:%M') }}{% endif %}
+        {% if a.applied_at %}Aplicó {{ a.applied_at.strftime('%d/%m') }}{% endif %}
+        {% if a.follow_up_at %}{% if a.follow_up_at <= today %}<span class="tag due">Seguimiento hoy</span>{% else %}· Seguir {{ a.follow_up_at.strftime('%d/%m') }}{% endif %}{% endif %}
+        {% if a.ats.score %}· ATS {{ a.ats.score }}%{% endif %}
+      </span>
+    </a>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

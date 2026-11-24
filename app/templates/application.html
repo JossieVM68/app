@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}Aplicación · {{ job.company }}{% endblock %}
+{% block content %}
+<a class="back" href="/aplicaciones">← Mis aplicaciones</a>
+<section class="hero">
+  <div>
+    <h1>{{ job.title }}</h1>
+    <p class="muted">{{ job.company }} · {{ job.location }} · <span class="pill st-{{ a.status }}">{{ labels[a.status] }}</span></p>
+  </div>
+  <form method="post" action="/aplicaciones/{{ a.id }}/estado" class="row">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    {% if a.status == 'preparando' %}<button class="btn primary" name="estado" value="aplicada">✅ Ya apliqué</button>{% endif %}
+    {% if a.status == 'aplicada' %}<button class="btn primary" name="estado" value="seguimiento">✉️ Ya mandé el seguimiento</button>{% endif %}
+    {% if a.status in ['aplicada','seguimiento'] %}<button class="btn" name="estado" value="entrevista">🎤 ¡Me llamaron a entrevista!</button>{% endif %}
+    <select name="estado" data-autosubmit>
+      <option value="">Cambiar estado…</option>
+      {% for k, l in statuses %}<option value="{{ k }}">{{ l }}</option>{% endfor %}
+    </select>
+  </form>
+</section>
+
+{% if not p %}
+<div class="card callout"><h2>Todavía no hay documentos</h2>
+  <form method="post" action="/aplicaciones/{{ a.id }}/regenerar" data-busy="Creando tu CV adaptado, carta y emails…"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn primary">✨ Crear documentos</button></form></div>
+{% else %}
+
+<div class="steps card">
+  <h2>Cómo aplicar (4 pasos)</h2>
+  <ol>
+    <li><strong>Descarga tu CV y tu carta</strong> (abajo, en Word).</li>
+    <li><strong>Aplica</strong> {% if job.url %}en la <a href="{{ job.url }}" target="_blank" rel="noopener noreferrer">página de la vacante ↗</a>{% endif %}{% if a.contact_email or job.contact_email %} o por email con el botón “Abrir en Gmail” y adjunta los 2 archivos{% endif %}.</li>
+    <li>Presiona <strong>“Ya apliqué”</strong>. La app te recordará el seguimiento en 7 días.</li>
+    <li>Cuando te llamen, presiona <strong>“¡Me llamaron a entrevista!”</strong> y pon la fecha.</li>
+  </ol>
+</div>
+
+<div class="grid2">
+  <section class="card">
+    <h2>📄 Tu CV para esta vacante</h2>
+    {% set s = a.ats.score or 0 %}
+    <div class="ats">
+      <div class="ring {{ 'good' if s >= 80 else ('ok' if s >= 65 else 'low') }}" style="--p: {{ s }}"><span>{{ s }}<small>%</small></span></div>
+      <div><strong>Compatibilidad ATS</strong>
+        <p class="small muted">Palabras clave: {{ a.ats.coverage }}% · Formato: {{ a.ats.format }}%</p>
+        <p class="small">{% if s >= 80 %}¡Excelente! Tu CV está muy bien alineado.{% elif s >= 65 %}Bien. Puedes mejorarlo un poco.{% else %}Conviene mejorarlo antes de enviar.{% endif %}</p>
+      </div>
+    </div>
+    <div class="row">
+      <a class="btn primary" href="/aplicaciones/{{ a.id }}/cv.docx">⬇️ Descargar CV (Word)</a>
+      <a class="btn" href="/aplicaciones/{{ a.id }}/carta.docx">⬇️ Descargar carta (Word)</a>
+    </div>
+    <details class="mt"><summary>Ver detalle de la revisión ATS</summary>
+      <ul class="checks">{% for c in a.ats.checks or [] %}<li class="{{ 'ok' if c.ok else 'no' }}">{{ '✔' if c.ok else '✘' }} {{ c.label }}{% if not c.ok and c.tip %} — <span class="muted">{{ c.tip }}</span>{% endif %}</li>{% endfor %}</ul>
+      {% if a.ats.matched %}<h3>Palabras clave incluidas</h3><div class="chips">{% for k in a.ats.matched %}<span class="chip ok">{{ k }}</span>{% endfor %}</div>{% endif %}
+      {% if a.ats.missing %}<h3>Palabras clave que faltan</h3><div class="chips">{% for k in a.ats.missing %}<span class="chip no">{{ k }}</span>{% endfor %}</div>
+      <p class="small muted">Solo se agregan si de verdad aplican a tu experiencia. Nunca inventamos nada.</p>{% endif %}
+    </details>
+    <form method="post" action="/aplicaciones/{{ a.id }}/regenerar" data-busy="Mejorando tus documentos…" class="mt">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <label class="small">¿Quieres cambiar algo? (opcional)<input name="hint" placeholder="Ej.: destaca más mi experiencia con niños con discapacidades"></label>
+      <div class="row">
+        <select name="lang"><option value="">Mismo idioma ({{ 'inglés' if a.lang == 'en' else 'español' }})</option><option value="en">Inglés</option><option value="es">Español</option></select>
+        <label class="check"><input type="checkbox" name="missing" value="1" checked> Intentar incluir lo que falta</label>
+        <button class="btn">🔄 Regenerar</button>
+      </div>
+    </form>
+    <details class="mt"><summary>Vista previa del CV</summary>
+      {% set r = p.resume %}
+      <div class="resume-preview">
+        <h3>{{ r.name }}</h3><p class="muted">{{ r.headline }}</p>
+        <p>{{ r.summary }}</p>
+        <p><strong>Skills:</strong> {{ r.skills|join(' • ') }}</p>
+        {% for e in r.experience %}<p><strong>{{ e.title }}</strong> — {{ e.company }} <span class="muted">({{ e.start }} – {{ e.end }})</span></p><ul>{% for b in e.bullets %}<li>{{ b }}</li>{% endfor %}</ul>{% endfor %}
+      </div>
+    </details>
+  </section>
+
+  <section class="card">
+    <h2>📋 Datos y fechas</h2>
+    <form method="post" action="/aplicaciones/{{ a.id }}/datos">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <div class="grid2 tight">
+        <label>Persona de contacto<input name="contact_name" value="{{ a.contact_name }}"></label>
+        <label>Email de contacto<input name="contact_email" type="email" value="{{ a.contact_email or job.contact_email }}"></label>
+        <label>Fecha en que apliqué<input name="applied_at" type="date" value="{{ a.applied_at or '' }}"></label>
+        <label>Recordar seguimiento el<input name="follow_up_at" type="date" value="{{ a.follow_up_at or '' }}"></label>
+        <label>Fecha límite para aplicar<input name="deadline" type="date" value="{{ job.deadline or '' }}"></label>
+        <label>Entrevista (fecha y hora)<input name="interview_at" type="datetime-local" value="{{ a.interview_at.strftime('%Y-%m-%dT%H:%M') if a.interview_at else '' }}"></label>
+      </div>
+      <label>Notas<textarea name="notes" rows="3">{{ a.notes }}</textarea></label>
+      <button class="btn">Guardar</button>
+    </form>
+    {% if p.brechas_honestas %}<h3>⚠️ Ten en cuenta</h3><ul class="small">{% for x in p.brechas_honestas %}<li>{{ x }}</li>{% endfor %}</ul>{% endif %}
+  </section>
+</div>
+
+<section class="card" id="textos">
+  <h2>✉️ Carta y emails</h2>
+  <form method="post" action="/aplicaciones/{{ a.id }}/textos">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <div class="tabs" data-tabs>
+      <button type="button" class="tab on" data-tab="t1">Email de aplicación</button>
+      <button type="button" class="tab" data-tab="t2">Carta de presentación</button>
+      <button type="button" class="tab" data-tab="t3">Seguimiento (7 días)</button>
+      <button type="button" class="tab" data-tab="t4">Nota de LinkedIn</button>
+    </div>
+    <div class="tabpane" id="t1">
+      <label>Asunto<input name="email_subject" value="{{ p.email_subject }}" id="es"></label>
+      <label>Mensaje<textarea name="email_body" rows="10" id="eb">{{ p.email_body }}</textarea></label>
+      <div class="row">
+        <a class="btn primary" href="{{ gmail }}" target="_blank" rel="noopener noreferrer">Abrir en Gmail ↗</a>
+        <button type="button" class="btn ghost" data-copy="eb">Copiar mensaje</button>
+        <span class="small muted">Recuerda adjuntar tu CV y tu carta.</span>
+      </div>
+    </div>
+    <div class="tabpane" id="t2" hidden>
+      <textarea name="cover_letter" rows="16" id="cl">{{ p.cover_letter }}</textarea>
+      <button type="button" class="btn ghost" data-copy="cl">Copiar carta</button>
+    </div>
+    <div class="tabpane" id="t3" hidden>
+      <label>Asunto<input name="followup_subject" value="{{ p.followup_subject }}"></label>
+      <label>Mensaje<textarea name="followup_body" rows="8" id="fb">{{ p.followup_body }}</textarea></label>
+      <div class="row"><a class="btn" href="{{ gmail_fu }}" target="_blank" rel="noopener noreferrer">Abrir en Gmail ↗</a><button type="button" class="btn ghost" data-copy="fb">Copiar</button></div>
+    </div>
+    <div class="tabpane" id="t4" hidden>
+      <textarea name="linkedin_note" rows="4" id="ln" maxlength="300">{{ p.linkedin_note }}</textarea>
+      <button type="button" class="btn ghost" data-copy="ln">Copiar</button>
+    </div>
+    <button class="btn mt">Guardar cambios en los textos</button>
+  </form>
+</section>
+
+{% if p.preparacion_entrevista %}
+<section class="card">
+  <h2>🎤 Prepárate para la entrevista</h2>
+  <ol>{% for x in p.preparacion_entrevista %}<li>{{ x }}</li>{% endfor %}</ol>
+</section>
+{% endif %}
+{% endif %}
+
+<section class="card" id="historial">
+  <h2>🕑 Historial</h2>
+  <form method="post" action="/aplicaciones/{{ a.id }}/nota" class="row">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input name="note" placeholder="Agregar una nota (ej.: hablé con la directora, me pidieron referencias)" class="grow">
+    <button class="btn">Agregar</button>
+  </form>
+  <ul class="timeline">
+    {% for e in a.events %}<li><span class="muted small">{{ e.at.strftime('%d/%m/%Y %H:%M') }}</span> {{ e.note }}</li>{% endfor %}
+  </ul>
+  <form method="post" action="/aplicaciones/{{ a.id }}/borrar" data-confirm="¿Eliminar esta aplicación? Se borran los documentos y el historial.">
+    <input type="hidden" name="csrf" value="{{ csrf }}"><button class="link danger small">Eliminar aplicación</button>
+  </form>
+</section>
+{% endblock %}

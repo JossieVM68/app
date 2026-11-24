@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% from "_macros.html" import job_row %}
+{% block title %}Vacantes{% endblock %}
+{% block content %}
+<section class="hero">
+  <div><h1>Vacantes</h1><p class="muted">{{ total }} resultados. Las mejores para ti aparecen primero.</p></div>
+  <div class="row">
+    <button class="btn ghost" data-toggle="add-job">+ Agregar una vacante</button>
+    <form method="post" action="/buscar" data-busy="Buscando…"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn primary">🔎 Buscar ahora</button></form>
+  </div>
+</section>
+
+<div class="card" id="add-job" hidden>
+  <h2>Agregar una vacante que encontraste</h2>
+  <p class="muted small">¿La viste en Indeed, LinkedIn, un periódico o te la recomendaron? Pégala aquí y la app la analiza.</p>
+  <form method="post" action="/vacantes/nueva" data-busy="Analizando la vacante…">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <div class="grid2">
+      <label>Puesto *<input name="title" required></label>
+      <label>Empresa<input name="company"></label>
+      <label>Ubicación<input name="location" placeholder="Chicago, IL"></label>
+      <label>Enlace<input name="url" type="url" placeholder="https://"></label>
+      <label>Fecha límite<input name="deadline" type="date"></label>
+    </div>
+    <label>Descripción completa *<textarea name="description" rows="8" required placeholder="Copia y pega aquí toda la descripción del trabajo"></textarea></label>
+    <button class="btn primary">Agregar y analizar</button>
+  </form>
+</div>
+
+<form class="filters" method="get">
+  <input name="q" value="{{ q }}" placeholder="Buscar puesto, empresa o ciudad">
+  <select name="estado">
+    {% for v, l in [('activas','Activas'),('nuevo','Nuevas'),('guardado','Guardadas'),('aplicando','En proceso'),('descartado','Descartadas'),('todas','Todas')] %}
+    <option value="{{ v }}" {{ 'selected' if estado == v }}>{{ l }}</option>{% endfor %}
+  </select>
+  <select name="min">
+    {% for v, l in [(0,'Cualquier puntaje'),(60,'60 o más'),(70,'70 o más'),(80,'80 o más')] %}
+    <option value="{{ v }}" {{ 'selected' if min == v }}>{{ l }}</option>{% endfor %}
+  </select>
+  <select name="fuente"><option value="">Todas las fuentes</option>{% for s in sources %}<option {{ 'selected' if fuente == s }}>{{ s }}</option>{% endfor %}</select>
+  <button class="btn">Filtrar</button>
+</form>
+
+<div class="card list">
+  {% for j in jobs %}{{ job_row(j, csrf) }}{% else %}<p class="muted">No hay vacantes con estos filtros.</p>{% endfor %}
+</div>
+{% if pages > 1 %}
+<div class="pager">
+  {% if page > 1 %}<a class="btn ghost" href="?q={{ q|urlencode }}&estado={{ estado }}&min={{ min }}&fuente={{ fuente }}&page={{ page-1 }}">← Anterior</a>{% endif %}
+  <span class="muted">Página {{ page }} de {{ pages }}</span>
+  {% if page < pages %}<a class="btn ghost" href="?q={{ q|urlencode }}&estado={{ estado }}&min={{ min }}&fuente={{ fuente }}&page={{ page+1 }}">Siguiente →</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+*.db
+*.db-journal
+data/
+.claude/settings.local.json
+CODIGO_ACTIVACION.txt

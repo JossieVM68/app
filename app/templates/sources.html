@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Fuentes{% endblock %}
+{% block content %}
+<section class="hero"><div><h1>Dónde busca la app</h1><p class="muted">Solo fuentes oficiales y públicas, para no arriesgar tus cuentas.</p></div></section>
+
+<form method="post" action="/fuentes">
+<input type="hidden" name="csrf" value="{{ csrf }}">
+<section class="card">
+  <h2>Fuentes</h2>
+  <div class="srcs">
+  {% for key, name, kind, ready, count in info %}
+    <label class="src {{ '' if ready else 'off' }}">
+      <input type="checkbox" name="en_{{ key }}" {{ 'checked' if key in srcs.enabled }}>
+      <span><strong>{{ name }}</strong>
+        <small class="muted">{{ count }} vacantes · {% if kind == 'ia' %}{% if ready %}activa ✅{% else %}necesita la llave de Claude{% endif %}{% elif kind == 'llave' %}{% if ready %}conectada ✅{% else %}necesita llave (gratis o de pago){% endif %}{% elif kind == 'empresas' %}{{ (srcs[key] or [])|length }} empresas{% else %}gratis{% endif %}</small></span>
+    </label>
+  {% endfor %}
+  </div>
+</section>
+
+<section class="card">
+  <h2>Empresas que vigilo</h2>
+  <p class="muted small">Escribe el identificador del portal de empleo de cada empresa (uno por línea). O deja que la app te sugiera empresas y las verifique.</p>
+  <div class="grid2">
+    {% for k in ['greenhouse','lever','ashby','smartrecruiters'] %}
+    <label>{{ k|capitalize }}<textarea name="{{ k }}" rows="5" class="mono">{{ (srcs[k] or [])|join('\n') }}</textarea></label>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="card">
+  <h2>Horario automático</h2>
+  <div class="row wrap">
+    <label>Buscar cada<select name="every_hours">{% for h, l in [(24,'Todos los días'),(48,'Cada 2 días'),(12,'Dos veces al día')] %}<option value="{{ h }}" {{ 'selected' if sched.every_hours == h }}>{{ l }}</option>{% endfor %}</select></label>
+    <label>A partir de las (hora de Chicago)<input type="number" name="hour_local" min="0" max="23" value="{{ sched.hour_local }}"></label>
+    <label>Vacantes a analizar con IA por búsqueda<input type="number" name="max_ai_per_run" min="5" max="150" value="{{ sched.max_ai_per_run }}"></label>
+  </div>
+</section>
+<button class="btn primary">Guardar</button>
+</form>
+
+<form method="post" action="/fuentes/sugerir" data-busy="Buscando y verificando empresas para ti…" class="mt">
+  <input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn">✨ Sugerir empresas para mí</button>
+</form>
+
+<section class="card mt">
+  <h2>Últimas búsquedas</h2>
+  {% for r in runs %}
+  <details><summary>{{ r.started_at.strftime('%d/%m %H:%M') }} UTC · {{ 'automática' if r.trigger == 'auto' else 'manual' }} · {{ r.new }} nuevas · {{ r.scored }} analizadas {% if not r.finished_at %}(en curso){% elif not r.ok %}⚠️{% endif %}</summary>
+    <ul class="small">{% for l in r.log or [] %}<li>{{ l }}</li>{% endfor %}</ul></details>
+  {% else %}<p class="muted">Todavía no hay búsquedas.</p>{% endfor %}
+</section>
+{% endblock %}
